@@ -5,12 +5,13 @@ import pandas as pd
 import anndata as ad
 from scipy import sparse
 
+from .transform import cartesian_to_polar
+
 
 def load_data(
     file_path: str,
     sep: str = "\t",
     index_col: int = 0,
-    backed: bool = False,
     dtype: Literal["float32", "float64"] = "float32",
     sparse_output: bool = True,
     verbose: bool = False,
@@ -39,7 +40,7 @@ def load_data(
     if path.suffix == ".h5ad":
         if verbose:
             print(f"[↓] Memory-mapping AnnData from {path}")
-        return ad.read_h5ad(str(path), backed="r" if backed else None)
+        return ad.read_h5ad(str(path))
 
     if verbose:
         print(f"[INFO] Fast CSV read of {path} with dtype {dtype} and sep '{sep}'")
@@ -97,3 +98,36 @@ def save_data(
     if verbose:
         print("[✓] File saved.")
     return adata
+
+
+def load_coords_and_angles(datasets, vp):
+    """
+    For each dataset, extract 2D UMAP coordinates and compute polar angles relative to a vantage point.
+
+    Args:
+        datasets (dict[str, ad.AnnData]): Mapping of condition names to AnnData objects.
+        vp (array-like): Vantage point in UMAP space, shape (2,).
+
+    Returns:
+        tuple: A tuple containing:
+            - coords_2d (dict[str, np.ndarray]): 2D Cartesian coordinates for each state.
+            - polars (dict[str, np.ndarray]): Angular coordinates (theta) for each cell in each state.
+    """
+    coords_2d = {}
+    polars = {}
+    for state, ad in datasets.items():
+        coords = ad.obsm["X_umap"]
+
+        # Convert sparse to dense if needed
+        if sparse.issparse(coords):
+            coords = coords.toarray()
+
+        # Use only first two dimensions
+        coords = coords[:, :2].astype(float)
+
+        # Compute polar angle around vp; discard radial distances (_)
+        theta, _ = cartesian_to_polar(coords, vp, verbose=False)
+        coords_2d[state] = coords
+        polars[state] = theta
+
+    return coords_2d, polars

@@ -5,6 +5,7 @@ import anndata as ad
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from umap import UMAP
+from scipy import sparse
 
 from spatialrsp.utils import cartesian_to_polar, sigfigs
 
@@ -33,7 +34,7 @@ def _get_dense_X(adata: ad.AnnData, verbose: bool = False) -> np.ndarray:
 
 def quality_control(
     adata: ad.AnnData,
-    min_nonzero: int = 10,
+    min_nonzero: float = 10,
     max_dropout: float = 0.5,
     verbose: bool = False,
 ) -> ad.AnnData:
@@ -41,7 +42,7 @@ def quality_control(
 
     Args:
         adata (AnnData): Annotated data object.
-        min_nonzero (int): Minimum nonzero values per observation.
+        min_nonzero (float): Minimum nonzero values per observation.
         max_dropout (float): Maximum allowed dropout rate.
         verbose (bool): Verbose output toggle.
 
@@ -228,3 +229,48 @@ def polar_transform(
         )
 
     return adata
+
+
+def select_top(expr: np.ndarray, pct: float) -> np.ndarray:
+    """
+    Select the top fraction of values in an expression array.
+
+    Args:
+        expr (np.ndarray): 1D array of expression levels.
+        pct (float): Fraction between 0 and 1 indicating the proportion of top cells to select.
+
+    Returns:
+        mask (np.ndarray): Boolean mask of the same length as expr, True for the top pct cells.
+    """
+    N = expr.size
+    k = int(np.floor(pct * N))
+
+    # If pct is so small that k==0, return all False
+    if k <= 0:
+        return np.zeros(N, bool)
+
+    # Partial sort to get indices of top-k without full sort
+    idx = np.argpartition(expr, -k)[-k:]
+    mask = np.zeros(N, bool)
+    mask[idx] = True
+
+    return mask
+
+
+def extract_expr(adata, gene):
+    """
+    Retrieve a 1D array of expression values for a single gene from an AnnData.
+
+    Args:
+        adata (AnnData): Annotated data object containing expression data.
+        gene (str): Gene name or index to extract.
+
+    Returns:
+        np.ndarray: 1D array of expression values for the specified gene.
+    """
+    m = adata[:, gene].X
+
+    if sparse.issparse(m):
+        return m.toarray().ravel()
+
+    return np.asarray(m).ravel()
