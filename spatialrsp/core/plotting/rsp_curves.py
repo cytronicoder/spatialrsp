@@ -38,10 +38,10 @@ def plot_rsp_curve(
         color = "red" if expected_fg_curve is not None else None
         ax.plot(angle_closed, closed_curve, label=label, color=color, linewidth=2)
 
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
     ax.set_title(title, fontsize=14)
     ax.legend(loc="lower right", fontsize=10)
+
+    plt.tight_layout()
 
 
 def plot_single_rsp_curve(
@@ -78,7 +78,5 @@ def plot_single_rsp_curve(
         expected_closed = np.append(expected_fg_curve, expected_fg_curve[0])
         ax.plot(angle_closed, expected_closed, color="gray", label="Expected FG")
 
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
     ax.set_title("RSP Curve", fontsize=12)
     ax.legend(loc="lower right", fontsize=9)
