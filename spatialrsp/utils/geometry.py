@@ -28,7 +28,8 @@ def within_window(
     if verbose:
         if hasattr(theta, "shape"):
             print(
-                f"[within_window] {np.sum(result)} / {len(theta)} angles within ±{window_width/2:.2f} radians."
+                f"[within_window] {np.sum(result)} / {len(theta)} angles "
+                f"within ±{window_width/2:.2f} radians."
             )
         else:
             print(f"[within_window] Angle {theta:.2f} within window: {result}")
